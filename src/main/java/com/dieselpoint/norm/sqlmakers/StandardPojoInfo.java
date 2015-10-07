@@ -258,16 +258,39 @@ public class StandardPojoInfo implements PojoInfo {
 		}
 
 		if (value != null) {
+			// Perform deserialization if non-trivial data type is retrieved 
 			if (prop.serializer != null) {
 				value = prop.serializer.deserialize((String) value, prop.dataType);
-
+			// Convert value to enum type
 			} else if (prop.isEnumField) {
 				value = getEnumConst(prop.enumClass, prop.enumType, value);
+			// Convert Integer to Long if POJO write method expects Long
+			} else if (value.getClass().equals(Integer.class) && prop.writeMethod.getParameterTypes().length == 1
+					&& prop.writeMethod.getParameterTypes()[0].equals(Long.class)) {
+				value = Long.valueOf(((Integer) value).longValue());
+			
+			// Convert Long to Integer if POJO write method expects Integer and the Long value doesn't overflow
+			} else if (value.getClass().equals(Long.class) && prop.writeMethod.getParameterTypes().length == 1
+					&& prop.writeMethod.getParameterTypes()[0].equals(Integer.class)) {				
+				// Check for overflow
+				long valueAsLong = ((Long) value).longValue();  
+				if (valueAsLong > Integer.valueOf(Integer.MAX_VALUE).longValue()) {
+					throw new DbException("Provided value: " + value + " for write method " + prop.writeMethod.toString() 
+							+ " has overflown."); 
+				}
+				// Check for underflow
+				if (valueAsLong < Integer.valueOf(Integer.MIN_VALUE).longValue()) {
+					throw new DbException("Provided value: " + value + " for write method " + prop.writeMethod.toString() 
+							+ " has underflown."); 
+				}
+				// Convert if ok
+				value = Integer.valueOf(((Long) value).intValue());
 			}
+			
 		}
 
 		if (prop.writeMethod != null) {
-			try {
+			try {				
 				prop.writeMethod.invoke(pojo, value);
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 				throw new DbException("Could not write value into pojo. Property: " + prop.name + " of type: " 
