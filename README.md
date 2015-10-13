@@ -206,6 +206,13 @@ You can specify the particular flavor of SQL for your database with `Database.se
 Database db = new Database();
 db.setSqlMaker(new MySqlMaker());
 ```
+Some database-specific notes:
+
+MySQL: Should work out of the box.
+
+Postgres: Inexplicably, Postgres converts all column names to lowercase when you create a table, and 
+forces you to use double quotes around column names if you want mixed or upper case. The workaround
+is to add an @Column(name="somelowercasename") annotation to the fields in your pojo.
 
 ###Configuration
 Here's the Maven dependency:
@@ -214,7 +221,7 @@ Here's the Maven dependency:
 <dependency>
     <groupId>com.dieselpoint</groupId>
     <artifactId>norm</artifactId>
-    <version>0.8.1-rc1</version>
+    <version>0.8.1-rc2</version>
 </dependency>
 ```  
 
